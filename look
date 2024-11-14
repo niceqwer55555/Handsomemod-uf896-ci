@@ -1,0 +1,154 @@
+export http_proxy=http://10.77.159.120:808
+export https_proxy=http://10.77.159.120:808
+export set FORCE_UNSAFE_CONFIGURE=1
+
+export http_proxy=http://192.168.56.2:808
+export https_proxy=http://192.168.56.2:808
+export set FORCE_UNSAFE_CONFIGURE=1
+更新feeds.conf
+
+git reset --hard ed2528ba75
+
+./scripts/feeds update -a
+完成更新后，可修改源码根目录下feeds.conf.default文件实现增加软件源，以添加istore为例
+
+#修改feeds.conf.default文件
+nano ./feeds.conf.default
+#在最底下增加istore源
+src-git istore https://github.com/linkease/istore;main
+#完成软件源添加后，执行更新命令
+./scripts/feeds update -a
+#注：常用软件源
+#kiddin9
+src-git https://github.com/kiddin9/openwrt-packages.git;master
+#haiibo
+src-git https://github.com/haiibo/openwrt-packages.git;master
+完成所有软件源导入后，执行安装命令
+
+#install symlinks for all obtained packages into package/feeds/
+./scripts/feeds install -a
+
+完成配置后，点击save保存，配置文件默认保存在.config文件
+
+#预下载资源
+make download -j8 V=s
+完成资源下载后，开始编译
+
+#初次编译建议使用单线程编译方便查找错误
+make -j1 V=s
+#二次编译可选择多线程编译提高效率(j后数字为线程数）
+make -j32 V=s
+
+
+  之前用酷安上下载的苏苏亮亮版友提供的Openwrt，在高通410棒子上刷机成功，但编译一直就没搞定。近期听说又出了个分支版本ImmortalWrt，刷了个版本，感觉界面清爽不少，内核也升级，遂打算搞定编译+刷机
+
+过程记录如下：
+
+1.Ubuntu版本要求
+不能用Ubuntu18.04，./scripts/feeds update过程会报错，推荐用20.04
+
+Ubuntu 20.04.6版本pve下安装没问题，hyper-v下iso怎么也无法进入安装界面，后来下载安装了20.04版本就成功在hyper-v下安装完成，特此说明下。
+
+2. 安装依赖
+大多数教程都明确需要如下：
+
+sudo apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget curl swig rsync
+
+实际还缺如下两个：
+
+sudo apt-get -y install mkbootimg img2simg
+
+3. 编译过程
+   下载代码命令行：
+
+    git clone https://github.com/lkiuyu/immortalwrt.git
+
+    这个版本编译内核过程中会需要手动操作，所以多线程编译会报错。暂时没有想到办法解决，只能先-j1编译一次后，再-j8编译。
+
+    后续，如果menuconfig里修改了内核模块，也会出现上述确认过程，解决方案一样。
+
+20240720刷新：用最新的lkiuyu/immortalwrt.git编译出来的二进制，modem启动失败，原因未知，替换modem后依旧不能解决，回退到23年8月代码后恢复（酷安苏苏小亮亮最后发布的固件就是23年0802），lkiuyu的代码没有tag，幸运的是有人fork了代码
+
+git clone https://github.com/kennyhn88/immortalwrt.git
+git clone https://github.com/obanat/immortalwrt-8916
+4.编译配置：
+[Targe Images:]
+Kernel partition size (in MiB)    50
+
+Root filesystem partition size (in MiB)  200
+
+说明：kernel一般50M足够了，除非编译的kmod模块很多；root分区大小修改后，并不会影响编译出来的system.img文件大小，但会影响刷机的速度，默认的menuconfig编译出来的高通410的system.img(也就是rootfs.img)，大约60M，所以留100M可以了，考虑扩展性，改成200M。200M刷rootfs大约需要2分钟，所以酌情修改
+
+
+[Protocols]
+luci-proto-modemmanager=y
+
+[Utilities]
+android-tools-adbd=y
+
+gc=y
+
+注意：这两步可能是不需要的，选择modemmanager后，自动添加了依赖
+
+如果编译过程报modem文件冲突，检查menuconfig中firmware下的配置
+
+1.modem
+
+
+
+2.wifi
+
+
+
+3.nv项
+
+
+
+注意这几个貌似不能多选，多选后编译没问题，打包system.img就会报文件冲突，所以，只能一次编译一个，例如上图编译的是103s，编译完成后，修改menuconfig，再编译001C。
+
+编译完成后，把如下两个文件拷贝到openwrt的刷机包中，改名
+
+immortalwrt-msm89xx-msm8916-openstick-ufi001c-ext4-system.img   ==》 对应rootfs.img
+
+immortalwrt-msm89xx-msm8916-openstick-ufi001c-ext4-boot.img ==》对应boot.img
+
+其他的文件不要动，就用原来的，至此，刷机包准备完毕！
+————————————————
+
+                            版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+                        
+原文链接：https://blog.csdn.net/obana/article/details/134213234
+
+
+In general, the building instructions from the OpenWrt project apply, but different repositories are used.
+
+To build the firmware for the UF896 from this repository, use the following steps:
+
+Make sure you have the OpenWrt build requirements fulfilled.
+On Arch Linux and Arch based distributions, installing the AUR package "openwrt-devel" does pull in all needed dependencies.
+Clone this repository: git clone https://github.com/dreirund/Handsomemod-uf896.git.
+cd into the clone: cd Handsomemod-uf896.
+Generate feeds.conf from the default: cp feeds.conf.default feeds.conf.
+Make sure that in the feeds.conf the following feeds are enabled (note that the "packages" feed comes from HandsomeMod and not from OpenWrt, and also note the extra "handsomefeed" feed):
+src-git packages https://github.com/HandsomeMod/packages.git
+src-git luci https://git.openwrt.org/project/luci.git;openwrt-21.02
+src-git routing https://git.openwrt.org/feed/routing.git;openwrt-21.02
+src-git telephony https://git.openwrt.org/feed/telephony.git;openwrt-21.02
+src-git handsomefeed https://github.com/HandsomeMod/handsomefeed.git
+(Other feeds might be available as well.)
+Install packages from the feeds: ./scripts/feeds update -a && ./scripts/feeds install -a.
+Select the default configuration for the UF896:
+make menuconfig,
+Select the following options:
+Target System: Qualcomm Msm89xx Soc (CONFIG_TARGET_msm89xx=y),
+Subtarget: Msm8916 Soc based Targets (CONFIG_TARGET_msm89xx_msm8916=y),
+Target Profile: Openstick UF896 (CONFIG_TARGET_msm89xx_msm8916_DEVICE_openstick_uf896=y),
+Select Save and then Exit the configuration (do not do further configurations now).
+Generate default configuration for the selected target: make defconfig.
+If you want, configure options to your liking now: make menuconfig.
+Build the firmware image: make.
+You can also use example .config (that is my .config I use on the device) and example feeds.conf from the sample/ directory.
+
+For more build options and troubleshooting, refer to the OpenWrt build system usage and other documentation at OpenWrt.org.
+
+Installing
