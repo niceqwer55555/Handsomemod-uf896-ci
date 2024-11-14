@@ -21,7 +21,7 @@ on:
 
 env:
   REPO_URL: https://github.com/d0ng13/Handsomemod-uf896
-  REPO_BRANCH: master
+  REPO_BRANCH: uf896
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/ufiuz801.config
   DIY_P1_SH: diy-part1.sh
