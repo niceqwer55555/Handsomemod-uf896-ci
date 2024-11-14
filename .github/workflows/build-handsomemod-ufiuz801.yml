@@ -20,7 +20,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/niceqwer55555/Handsomemod-uf896
+  REPO_URL: https://github.com/d0ng13/Handsomemod-uf896
   REPO_BRANCH: master
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/ufiuz801.config
